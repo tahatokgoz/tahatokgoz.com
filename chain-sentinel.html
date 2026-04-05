@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chain Sentinel — Autonomous Attack Simulation Platform | ShahMat Sec</title>
+  <meta name="description" content="Chain Sentinel: Cloud-based autonomous attack simulation platform for WMS, IoT, and MQTT security. 42+ controls, MITRE ATT&CK mapping, AI-powered analysis.">
+  <meta name="author" content="Taha Tokgoz">
+  <meta name="robots" content="index, follow">
+  <meta property="og:title" content="Chain Sentinel — Autonomous Attack Simulation Platform">
+  <meta property="og:description" content="Cloud-based autonomous security testing platform with 42+ controls for WMS/IoT/MQTT infrastructures. MITRE ATT&CK-mapped AI analysis.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://tahatokgoz.com/chain-sentinel">
+  <meta property="og:image" content="https://tahatokgoz.com/assets/chain-sentinel/dashboard.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Chain Sentinel — Autonomous Attack Simulation Platform">
+  <meta name="twitter:description" content="42+ autonomous security controls for WMS/IoT/MQTT. MITRE ATT&CK mapping + AI analysis.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#9822;</text></svg>">
+  <link rel="canonical" href="https://tahatokgoz.com/chain-sentinel">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ═══════════════════════════════════════════════
+       RESET & BASE
+       ═══════════════════════════════════════════════ */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { font-size: 16px; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+    body {
+      background: #050505;
+      color: #c0c0c0;
+      font-family: 'JetBrains Mono', monospace;
+      overflow-x: hidden;
+      line-height: 1.6;
+    }
+    ::selection { background: #c41e3a; color: #050505; }
+
+    /* ═══════════════════════════════════════════════
+       CUSTOM SCROLLBAR
+       ═══════════════════════════════════════════════ */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #050505; }
+    ::-webkit-scrollbar-thumb { background: #c41e3a; border-radius: 0; }
+    ::-webkit-scrollbar-thumb:hover { background: #e0223f; }
+    * { scrollbar-width: thin; scrollbar-color: #c41e3a #050505; }
+
+    /* ═══════════════════════════════════════════════
+       VARIABLES
+       ═══════════════════════════════════════════════ */
+    :root {
+      --void: #050505;
+      --surface-1: #0a0a0a;
+      --surface-2: #141414;
+      --surface-3: #1f1f1f;
+      --blood: #c41e3a;
+      --blood-dim: #8a1529;
+      --silver: #c0c0c0;
+      --dim: #808080;
+      --ghost: #4a4a4a;
+      --white: #e8e8e8;
+      --font-heading: 'Syne', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    /* ═══════════════════════════════════════════════
+       SCANLINE OVERLAY
+       ═══════════════════════════════════════════════ */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg, transparent, transparent 2px,
+        rgba(0, 0, 0, 0.03) 2px, rgba(0, 0, 0, 0.03) 4px
+      );
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    /* ═══════════════════════════════════════════════
+       GRID BACKGROUND
+       ═══════════════════════════════════════════════ */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    #three-canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .radial-glow {
+      position: fixed;
+      top: -30%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 120vw;
+      height: 80vh;
+      background: radial-gradient(ellipse at center, rgba(196,30,58,0.06) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* ═══════════════════════════════════════════════
+       LAYOUT
+       ═══════════════════════════════════════════════ */
+    .page-wrapper {
+      position: relative;
+      z-index: 2;
+    }
+    .container {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+    @media (min-width: 768px) {
+      .container { padding: 0 40px; }
+    }
+    section { padding: 100px 0; }
+
+    /* ═══════════════════════════════════════════════
+       LOADING SCREEN
+       ═══════════════════════════════════════════════ */
+    #loader {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      background: #050505;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+    }
+    #loader .loader-brand {
+      font-family: var(--font-heading);
+      font-weight: 800;
+      font-size: 14px;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--dim);
+      opacity: 0;
+    }
+    #loader .loader-line {
+      width: 120px;
+      height: 1px;
+      background: var(--surface-3);
+      position: relative;
+      overflow: hidden;
+      opacity: 0;
+    }
+    #loader .loader-line::after {
+      content: '';
+      position: absolute;
+      left: 0; top: 0;
+      height: 100%;
+      width: 0%;
+      background: var(--blood);
+      animation: loaderProgress 1.4s ease-in-out forwards;
+      animation-delay: 0.2s;
+    }
+    @keyframes loaderProgress {
+      0% { width: 0%; }
+      100% { width: 100%; }
+    }
+    #loader .loader-status {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--ghost);
+      letter-spacing: 0.1em;
+      opacity: 0;
+    }
+
+    /* ═══════════════════════════════════════════════
+       NAVIGATION
+       ═══════════════════════════════════════════════ */
+    .nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 1000;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      transition: background 0.3s ease, border-color 0.3s ease;
+      border-bottom: 1px solid transparent;
+    }
+    .nav.scrolled {
+      background: rgba(5,5,5,0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom-color: var(--surface-2);
+    }
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+    }
+    .nav-back {
+      font-family: var(--font-heading);
+      font-weight: 800;
+      font-size: 12px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--silver);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: color 0.2s ease;
+    }
+    .nav-back:hover { color: var(--blood); }
+    .nav-back span { color: var(--blood); }
+    .nav-back .arrow {
+      color: var(--dim);
+      font-size: 14px;
+      transition: transform 0.2s ease, color 0.2s ease;
+    }
+    .nav-back:hover .arrow { transform: translateX(-3px); color: var(--blood); }
+    .nav-links {
+      display: none;
+      gap: 28px;
+      list-style: none;
+    }
+    @media (min-width: 768px) {
+      .nav-links { display: flex; }
+    }
+    .nav-links a {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--dim);
+      text-decoration: none;
+      transition: color 0.2s ease;
+      position: relative;
+    }
+    .nav-links a::after {
+      content: '';
+      position: absolute;
+      bottom: -4px; left: 0;
+      width: 0; height: 1px;
+      background: var(--blood);
+      transition: width 0.3s ease;
+    }
+    .nav-links a:hover { color: var(--blood); }
+    .nav-links a:hover::after { width: 100%; }
+
+    .hamburger {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      cursor: pointer;
+      padding: 8px;
+      background: none;
+      border: none;
+      z-index: 1001;
+    }
+    @media (min-width: 768px) { .hamburger { display: none; } }
+    .hamburger s { display: block; width: 22px; height: 1px; background: var(--silver); transition: all 0.3s ease; }
+    .hamburger.active s:nth-child(1) { transform: rotate(45deg) translate(4px, 4px); }
+    .hamburger.active s:nth-child(2) { opacity: 0; }
+    .hamburger.active s:nth-child(3) { transform: rotate(-45deg) translate(4px, -4px); }
+
+    .mobile-menu {
+      position: fixed;
+      inset: 0;
+      z-index: 999;
+      background: rgba(5,5,5,0.97);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 32px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    .mobile-menu.active { opacity: 1; pointer-events: all; }
+    .mobile-menu a {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--dim);
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+    .mobile-menu a:hover { color: var(--blood); }
+
+    /* ═══════════════════════════════════════════════
+       HERO
+       ═══════════════════════════════════════════════ */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding-top: 60px;
+      position: relative;
+    }
+    .hero-badge {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      color: var(--blood);
+      margin-bottom: 24px;
+    }
+    .hero-name {
+      font-family: var(--font-heading);
+      font-weight: 800;
+      line-height: 0.9;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 16px;
+    }
+    .hero-line {
+      display: block;
+      white-space: nowrap;
+      font-size: clamp(28px, 8vw, 100px);
+      letter-spacing: -0.03em;
+    }
+    .hero-line .char { display: inline-block; opacity: 0; }
+    .hero-subtitle {
+      font-family: var(--font-mono);
+      font-size: clamp(11px, 1.4vw, 14px);
+      color: var(--dim);
+      margin-bottom: 20px;
+      max-width: 640px;
+      line-height: 1.5;
+    }
+    .hero-meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+    .status-badge-hero {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border: 1px solid #2d6a3f;
+      color: #3a9956;
+      border-radius: 2px;
+    }
+    .tech-pill {
+      font-size: 10px;
+      letter-spacing: 0.05em;
+      padding: 3px 10px;
+      border: 1px solid var(--surface-3);
+      color: var(--dim);
+      border-radius: 2px;
+    }
+    .hero-desc {
+      font-size: 13px;
+      line-height: 1.8;
+      color: var(--dim);
+      max-width: 720px;
+      border-left: 2px solid var(--surface-3);
+      padding-left: 20px;
+    }
+    .scroll-indicator {
+      position: absolute;
+      bottom: 40px; left: 0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .scroll-indicator-line {
+      width: 40px; height: 1px;
+      background: var(--surface-3);
+      position: relative;
+      overflow: hidden;
+    }
+    .scroll-indicator-line::after {
+      content: '';
+      position: absolute;
+      left: -100%; top: 0;
+      width: 100%; height: 100%;
+      background: var(--blood);
+      animation: scrollPulse 2s ease-in-out infinite;
+    }
+    @keyframes scrollPulse {
+      0% { left: -100%; }
+      50% { left: 100%; }
+      100% { left: 100%; }
+    }
+    .scroll-indicator-text {
+      font-size: 9px;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--ghost);
+    }
+
+    /* ═══════════════════════════════════════════════
+       SECTION LABELS
+       ═══════════════════════════════════════════════ */
+    .section-label {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 48px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      letter-spacing: 0.15em;
+      color: var(--blood);
+    }
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(to right, var(--surface-3), transparent);
+    }
+
+    /* ═══════════════════════════════════════════════
+       PROBLEM / SOLUTION
+       ═══════════════════════════════════════════════ */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 32px;
+    }
+    @media (min-width: 768px) {
+      .two-col { grid-template-columns: 1fr 1fr; gap: 48px; }
+    }
+    .col-block {
+      border-left: 2px solid var(--surface-3);
+      padding-left: 20px;
+    }
+    .col-block.solution { border-left-color: var(--blood); }
+    .col-title {
+      font-family: var(--font-heading);
+      font-weight: 800;
+      font-size: 11px;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--dim);
+      margin-bottom: 16px;
+    }
+    .col-block.solution .col-title { color: var(--blood); }
+    .col-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .col-list li {
+      font-size: 12px;
+      line-height: 1.7;
+      color: var(--dim);
+      padding-left: 14px;
+      position: relative;
+    }
+    .col-list li::before {
+      content: '›';
+      position: absolute;
+      left: 0;
+      color: var(--ghost);
+    }
+    .col-block.solution .col-list li::before { color: var(--blood); }
+
+    /* ═══════════════════════════════════════════════
+       CAPABILITIES
+       ═══════════════════════════════════════════════ */
+    .cap-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+    @media (min-width: 768px) {
+      .cap-grid { grid-template-columns: 1fr 1fr; }
+    }
+    .cap-card {
+      border: 1px solid var(--surface-2);
+      border-left: 2px solid var(--surface-3);
+      padding: 24px;
+      background: var(--surface-1);
+      border-radius: 2px;
+      transition: border-left-color 0.4s ease, background 0.3s ease;
+    }
+    .cap-card:hover {
+      border-left-color: var(--blood);
+      background: var(--surface-2);
+    }
+    .cap-card-idx {
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: var(--ghost);
+      margin-bottom: 8px;
+    }
+    .cap-card-name {
+      font-family: var(--font-heading);
+      font-weight: 800;
+      font-size: 15px;
+      color: var(--white);
+      margin-bottom: 8px;
+    }
+    .cap-card-desc {
+      font-size: 12px;
+      line-height: 1.7;
+      color: var(--dim);
+    }
+
+    /* ═══════════════════════════════════════════════
+       SCREENSHOTS
+       ═══════════════════════════════════════════════ */
+    .ss-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 48px;
+    }
+    .ss-item { cursor: pointer; }
+    .ss-label {
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      color: var(--ghost);
+      margin-bottom: 8px;
+    }
+    .ss-label strong {
+      color: var(--blood);
+      font-weight: 600;
+    }
+    .ss-img-wrap {
+      border: 1px solid var(--surface-2);
+      border-radius: 2px;
+      overflow: hidden;
+      transition: border-color 0.3s ease;
+    }
+    .ss-item:hover .ss-img-wrap { border-color: var(--surface-3); }
+    .ss-img-wrap img {
+      width: 100%;
+      display: block;
+      transition: transform 0.4s ease;
+    }
+    .ss-item:hover .ss-img-wrap img { transform: scale(1.02); }
+    .ss-desc {
+      font-size: 11px;
+      line-height: 1.6;
+      color: var(--ghost);
+      margin-top: 10px;
+      max-width: 700px;
+    }
+
+    /* ═══════════════════════════════════════════════
+       LIGHTBOX
+       ═══════════════════════════════════════════════ */
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 10001;
+      background: rgba(0,0,0,0.95);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      cursor: zoom-out;
+    }
+    .lightbox.active { pointer-events: all; }
+    .lightbox img {
+      max-width: 90vw;
+      max-height: 90vh;
+      border: 1px solid var(--surface-3);
+      border-radius: 2px;
+    }
+    .lightbox-close {
+      position: absolute;
+      top: 24px;
+      right: 28px;
+      font-family: var(--font-mono);
+      font-size: 14px;
+      color: var(--dim);
+      background: none;
+      border: 1px solid var(--surface-3);
+      padding: 8px 14px;
+      cursor: pointer;
+      border-radius: 2px;
+      transition: color 0.2s ease, border-color 0.2s ease;
+      z-index: 10002;
+    }
+    .lightbox-close:hover { color: var(--blood); border-color: var(--blood); }
+
+    /* ═══════════════════════════════════════════════
+       ARCHITECTURE
+       ═══════════════════════════════════════════════ */
+    .arch-block {
+      border: 1px solid var(--surface-2);
+      background: var(--surface-1);
+      padding: 28px;
+      border-radius: 2px;
+      margin-bottom: 48px;
+    }
+    .arch-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px 0;
+      margin-bottom: 8px;
+      font-size: 12px;
+      line-height: 1.8;
+    }
+    .arch-row:last-child { margin-bottom: 0; }
+    .arch-key {
+      color: var(--blood);
+      min-width: 180px;
+      flex-shrink: 0;
+    }
+    .arch-val { color: var(--dim); }
+
+    /* FLOW DIAGRAM */
+    .flow-wrap {
+      overflow-x: auto;
+      padding: 20px 0;
+    }
+    .flow-diagram {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      min-width: max-content;
+    }
+    .flow-node {
+      font-size: 10px;
+      letter-spacing: 0.05em;
+      color: var(--silver);
+      padding: 10px 16px;
+      border: 1px solid var(--surface-3);
+      background: var(--surface-1);
+      border-radius: 2px;
+      white-space: nowrap;
+      transition: border-color 0.3s ease;
+    }
+    .flow-node:hover { border-color: var(--blood); }
+    .flow-arrow {
+      color: var(--ghost);
+      font-size: 14px;
+      padding: 0 6px;
+      flex-shrink: 0;
+    }
+
+    /* ═══════════════════════════════════════════════
+       PUBLICATION
+       ═══════════════════════════════════════════════ */
+    .pub-card {
+      border: 1px solid var(--surface-2);
+      border-left: 2px solid var(--blood);
+      padding: 28px;
+      background: var(--surface-1);
+      border-radius: 2px;
+    }
+    .pub-title {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--white);
+      line-height: 1.6;
+      margin-bottom: 8px;
+    }
+    .pub-venue {
+      font-size: 12px;
+      color: var(--dim);
+      margin-bottom: 16px;
+    }
+    .pub-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .pub-link {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.05em;
+      color: var(--dim);
+      text-decoration: none;
+      padding: 8px 16px;
+      border: 1px solid var(--surface-3);
+      border-radius: 2px;
+      transition: border-color 0.3s ease, color 0.3s ease, background 0.3s ease;
+    }
+    .pub-link:hover {
+      border-color: var(--blood);
+      color: var(--blood);
+      background: rgba(196,30,58,0.08);
+    }
+    .pub-note {
+      font-size: 11px;
+      color: var(--ghost);
+      font-style: italic;
+    }
+
+    /* ═══════════════════════════════════════════════
+       FOOTER
+       ═══════════════════════════════════════════════ */
+    .footer {
+      border-top: 1px solid var(--surface-2);
+      padding: 32px 0;
+    }
+    .footer-inner {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    @media (min-width: 768px) {
+      .footer-inner {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+      }
+    }
+    .footer-back {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--dim);
+      text-decoration: none;
+      letter-spacing: 0.1em;
+      transition: color 0.2s ease;
+    }
+    .footer-back:hover { color: var(--blood); }
+    .footer-copy {
+      font-size: 11px;
+      color: var(--dim);
+    }
+    .footer-copy span { color: var(--blood); }
+
+    /* ═══════════════════════════════════════════════
+       GSAP HELPERS
+       ═══════════════════════════════════════════════ */
+    .reveal { opacity: 0; transform: translateY(30px); }
+  </style>
+</head>
+<body>
+
+  <!-- LOADING SCREEN -->
+  <div id="loader" aria-hidden="true">
+    <div class="loader-brand">CHAIN SENTINEL</div>
+    <div class="loader-line"></div>
+    <div class="loader-status">Decrypting project dossier...</div>
+  </div>
+
+  <!-- THREE.JS CANVAS -->
+  <canvas id="three-canvas" aria-hidden="true"></canvas>
+
+  <!-- RADIAL GLOW -->
+  <div class="radial-glow" aria-hidden="true"></div>
+
+  <!-- MOBILE MENU -->
+  <div class="mobile-menu" id="mobileMenu" role="dialog" aria-label="Mobile navigation">
+    <a href="index.html">← Main Page</a>
+    <a href="#overview" onclick="closeMobileMenu()">Overview</a>
+    <a href="#features" onclick="closeMobileMenu()">Features</a>
+    <a href="#screenshots" onclick="closeMobileMenu()">Screenshots</a>
+    <a href="#architecture" onclick="closeMobileMenu()">Architecture</a>
+  </div>
+
+  <!-- LIGHTBOX -->
+  <div class="lightbox" id="lightbox" role="dialog" aria-label="Image viewer" aria-hidden="true">
+    <button class="lightbox-close" aria-label="Close image viewer">ESC</button>
+    <img id="lightboxImg" src="" alt="Screenshot full view">
+  </div>
+
+  <!-- PAGE WRAPPER -->
+  <div class="page-wrapper">
+
+    <!-- NAVIGATION -->
+    <nav class="nav" id="navbar" role="navigation" aria-label="Project navigation">
+      <div class="container nav-inner">
+        <a href="index.html" class="nav-back" aria-label="Back to main site">
+          <i class="arrow">←</i> SHAHMAT SEC <span>&#9822;</span>
+        </a>
+        <ul class="nav-links">
+          <li><a href="#overview">Overview</a></li>
+          <li><a href="#features">Features</a></li>
+          <li><a href="#screenshots">Screenshots</a></li>
+          <li><a href="#architecture">Architecture</a></li>
+        </ul>
+        <button class="hamburger" id="hamburger" aria-label="Toggle navigation" aria-expanded="false">
+          <s></s><s></s><s></s>
+        </button>
+      </div>
+    </nav>
+
+    <main>
+
+      <!-- HERO -->
+      <section class="hero container" id="hero" aria-label="Project introduction">
+        <div>
+          <p class="hero-badge reveal">// PROJECT DOSSIER</p>
+          <h1 class="hero-name" id="heroName">
+            <span class="hero-line">CHAIN</span>
+            <span class="hero-line">SENTINEL</span>
+          </h1>
+          <p class="hero-subtitle reveal">Autonomous Attack Simulation Platform for Supply Chain &amp; WMS Security</p>
+          <div class="hero-meta reveal">
+            <span class="status-badge-hero">Completed</span>
+            <span class="tech-pill">Python</span>
+            <span class="tech-pill">FastAPI</span>
+            <span class="tech-pill">Docker</span>
+            <span class="tech-pill">MQTT</span>
+            <span class="tech-pill">MITRE ATT&amp;CK</span>
+            <span class="tech-pill">AI/LLM</span>
+          </div>
+          <p class="hero-desc reveal">
+            Cloud-based autonomous security testing platform engineered for WMS, IoT, and MQTT infrastructures. Executes 42+ automated vulnerability controls with MITRE ATT&amp;CK-mapped AI analysis. Presented at the 12th International MIS Conference (IMISC 2025).
+          </p>
+        </div>
+        <div class="scroll-indicator reveal" aria-hidden="true">
+          <div class="scroll-indicator-line"></div>
+          <span class="scroll-indicator-text">Scroll</span>
+        </div>
+      </section>
+
+      <!-- PROBLEM & SOLUTION -->
+      <section id="overview" aria-label="Problem and solution overview">
+        <div class="container">
+          <div class="section-label reveal">// THE PROBLEM</div>
+          <div class="two-col">
+            <div class="col-block reveal">
+              <div class="col-title">Problem</div>
+              <ul class="col-list">
+                <li>Warehouse Management Systems (WMS) and IoT/MQTT infrastructures are rapidly expanding but remain critically under-tested for security vulnerabilities.</li>
+                <li>Traditional penetration testing is manual, time-consuming, and fails to cover the breadth of attack surfaces in interconnected supply chain systems.</li>
+                <li>Organizations lack automated tools specifically designed for WMS/IoT security assessment.</li>
+              </ul>
+            </div>
+            <div class="col-block solution reveal">
+              <div class="col-title">Solution</div>
+              <ul class="col-list">
+                <li>Chain Sentinel automates the entire security assessment lifecycle — from network discovery to vulnerability detection to AI-powered risk analysis.</li>
+                <li>42+ autonomous security controls specifically engineered for WMS, IoT, and MQTT attack surfaces.</li>
+                <li>MITRE ATT&amp;CK framework mapping provides industry-standard threat classification.</li>
+                <li>Multi-provider AI integration (Claude, GPT, Gemini, Ollama) generates executive-level security reports with attack chain analysis.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CAPABILITIES -->
+      <section id="features" aria-label="Platform capabilities">
+        <div class="container">
+          <div class="section-label reveal">// CAPABILITIES</div>
+          <div class="cap-grid" id="capGrid"></div>
+        </div>
+      </section>
+
+      <!-- SCREENSHOTS -->
+      <section id="screenshots" aria-label="Platform screenshots">
+        <div class="container">
+          <div class="section-label reveal">// FIELD EVIDENCE</div>
+          <div class="ss-grid" id="ssGrid"></div>
+        </div>
+      </section>
+
+      <!-- ARCHITECTURE -->
+      <section id="architecture" aria-label="System architecture">
+        <div class="container">
+          <div class="section-label reveal">// SYSTEM ARCHITECTURE</div>
+          <div class="arch-block reveal">
+            <div class="arch-row"><span class="arch-key">Backend:</span><span class="arch-val">Python 3.11 · FastAPI · Uvicorn</span></div>
+            <div class="arch-row"><span class="arch-key">Scanning Engine:</span><span class="arch-val">Nmap · Custom TCP/UDP Scanner · Banner Grabbing</span></div>
+            <div class="arch-row"><span class="arch-key">Protocols:</span><span class="arch-val">MQTT (Paho) · HTTP/HTTPS · WebSocket</span></div>
+            <div class="arch-row"><span class="arch-key">AI Integration:</span><span class="arch-val">Claude API · OpenAI API · Google Gemini · Ollama (Local)</span></div>
+            <div class="arch-row"><span class="arch-key">Framework:</span><span class="arch-val">MITRE ATT&amp;CK v14</span></div>
+            <div class="arch-row"><span class="arch-key">Containerization:</span><span class="arch-val">Docker · Docker Compose</span></div>
+            <div class="arch-row"><span class="arch-key">Frontend:</span><span class="arch-val">HTML · Tailwind CSS · Chart.js · JavaScript</span></div>
+            <div class="arch-row"><span class="arch-key">Database:</span><span class="arch-val">SQLite (Scan Results &amp; Findings Storage)</span></div>
+          </div>
+          <div class="flow-wrap reveal">
+            <div class="flow-diagram">
+              <div class="flow-node">Target Infrastructure</div>
+              <div class="flow-arrow">→</div>
+              <div class="flow-node">Network Discovery</div>
+              <div class="flow-arrow">→</div>
+              <div class="flow-node">Port Scan &amp; Service Detection</div>
+              <div class="flow-arrow">→</div>
+              <div class="flow-node">42+ Autonomous Controls</div>
+              <div class="flow-arrow">→</div>
+              <div class="flow-node">Findings &amp; CVSS Scoring</div>
+              <div class="flow-arrow">→</div>
+              <div class="flow-node">AI Analysis Engine</div>
+              <div class="flow-arrow">→</div>
+              <div class="flow-node">MITRE ATT&amp;CK Mapping</div>
+              <div class="flow-arrow">→</div>
+              <div class="flow-node">Executive Report</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PUBLICATION -->
+      <section aria-label="Academic publication">
+        <div class="container">
+          <div class="section-label reveal">// ACADEMIC PUBLICATION</div>
+          <article class="pub-card reveal">
+            <div class="pub-title">"Evaluation of Supply Chain Attacks and System Vulnerabilities from a Hacking Perspective"</div>
+            <div class="pub-venue">12th International MIS Conference (IMISC) &mdash; October 2025</div>
+            <div class="pub-links">
+              <a href="https://2025.imisc.net/" target="_blank" rel="noopener" class="pub-link">View Conference →</a>
+              <a href="assets/publications/imisc-2025-paper.pdf" target="_blank" class="pub-link">Download Paper (PDF) →</a>
+            </div>
+            <div class="pub-note">Chain Sentinel served as the practical implementation component of this academic research.</div>
+          </article>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="footer" role="contentinfo">
+      <div class="container footer-inner">
+        <a href="index.html" class="footer-back">&larr; Back to Main</a>
+        <p class="footer-copy">&copy; 2026 SHAHMAT SEC <span>&#9822;</span> &mdash; All rights reserved.</p>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- CDN SCRIPTS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.7/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.7/dist/ScrollTrigger.min.js"></script>
+  <script src="https://unpkg.com/lenis@1.1.18/dist/lenis.min.js"></script>
+
+  <script>
+  /* ═══════════════════════════════════════════════════════
+     DATA — İÇERİK YÖNETİMİ
+     ═══════════════════════════════════════════════════════ */
+
+  // ───────────────────────────────────────────────
+  // YETENEKLERİ DÜZENLEMEK İÇİN BU ARRAY'İ GÜNCELLE
+  // ───────────────────────────────────────────────
+  const capabilities = [
+    { name: "Network Discovery", desc: "Automated device and service detection across target infrastructure. One-click network scanning." },
+    { name: "Advanced Port Scanning", desc: "Granular TCP/UDP port scanning with configurable ranges and manual pentest capabilities." },
+    { name: "42+ Autonomous Controls", desc: "Pre-built security test scenarios for IoT, MQTT, API, and Portal attack surfaces." },
+    { name: "AI-Powered Analysis", desc: "Multi-provider LLM integration (Claude, GPT, Gemini, Ollama) for intelligent vulnerability assessment with executive summaries, risk scoring, and attack chain mapping." },
+    { name: "MITRE ATT&CK Mapping", desc: "Every finding automatically mapped to MITRE ATT&CK tactics and techniques with technique IDs." },
+    { name: "Severity-Based Prioritization", desc: "CVSS scoring with visual severity distribution, prioritized remediation guidance." }
+  ];
+
+  // ───────────────────────────────────────────────
+  // EKRAN GÖRÜNTÜLERİNİ DÜZENLEMEK İÇİN BU ARRAY'İ GÜNCELLE
+  // ───────────────────────────────────────────────
+  const screenshots = [
+    { idx: "01", label: "COMMAND CENTER", src: "assets/chain-sentinel/dashboard.png", desc: "Main dashboard with network discovery, advanced port scanning, severity distribution charts, and scan results overview." },
+    { idx: "02", label: "VULNERABILITY FINDINGS", src: "assets/chain-sentinel/findings.png", desc: "Detailed findings view with severity badges, CVSS scores, evidence sections, and remediation guidance for each vulnerability." },
+    { idx: "03", label: "AI PROVIDER INTEGRATION", src: "assets/chain-sentinel/ai-settings.png", desc: "Multi-provider AI configuration panel supporting Claude, GPT, Gemini, and Ollama with connection testing." },
+    { idx: "04", label: "AI SECURITY ANALYSIS", src: "assets/chain-sentinel/ai-analysis.png", desc: "AI-generated executive summary, risk assessment, and attack chain visualization with step-by-step exploitation paths." },
+    { idx: "05", label: "MITRE ATT&CK MAPPING", src: "assets/chain-sentinel/mitre-mapping.png", desc: "Automated MITRE ATT&CK framework mapping with prioritized findings, tactic classification, and technique IDs." }
+  ];
+
+  /* ═══════════════════════════════════════════════════════
+     RENDER ENGINE
+     ═══════════════════════════════════════════════════════ */
+  function renderCapabilities() {
+    const grid = document.getElementById('capGrid');
+    if (!capabilities.length) { grid.closest('section').style.display = 'none'; return; }
+    grid.innerHTML = capabilities.map((c, i) => `
+      <article class="cap-card reveal">
+        <div class="cap-card-idx">0${i + 1}</div>
+        <div class="cap-card-name">${c.name}</div>
+        <p class="cap-card-desc">${c.desc}</p>
+      </article>
+    `).join('');
+  }
+
+  function renderScreenshots() {
+    const grid = document.getElementById('ssGrid');
+    if (!screenshots.length) { grid.closest('section').style.display = 'none'; return; }
+    grid.innerHTML = screenshots.map(s => `
+      <div class="ss-item reveal" onclick="openLightbox('${s.src}')" role="button" tabindex="0" aria-label="View ${s.label} screenshot full size">
+        <div class="ss-label"><strong>${s.idx}</strong> // ${s.label}</div>
+        <div class="ss-img-wrap">
+          <img src="${s.src}" alt="${s.label}" loading="lazy">
+        </div>
+        <p class="ss-desc">${s.desc}</p>
+      </div>
+    `).join('');
+  }
+
+  renderCapabilities();
+  renderScreenshots();
+
+  /* ═══════════════════════════════════════════════════════
+     LIGHTBOX
+     ═══════════════════════════════════════════════════════ */
+  const lightbox = document.getElementById('lightbox');
+  const lightboxImg = document.getElementById('lightboxImg');
+
+  function openLightbox(src) {
+    lightboxImg.src = src;
+    lightbox.setAttribute('aria-hidden', 'false');
+    gsap.to(lightbox, { opacity: 1, duration: 0.3, ease: 'power2.out', onStart: () => { lightbox.classList.add('active'); } });
+  }
+
+  function closeLightbox() {
+    gsap.to(lightbox, { opacity: 0, duration: 0.25, ease: 'power2.in', onComplete: () => {
+      lightbox.classList.remove('active');
+      lightbox.setAttribute('aria-hidden', 'true');
+      lightboxImg.src = '';
+    }});
+  }
+
+  lightbox.addEventListener('click', (e) => { if (e.target !== lightboxImg) closeLightbox(); });
+  document.querySelector('.lightbox-close').addEventListener('click', closeLightbox);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && lightbox.classList.contains('active')) closeLightbox(); });
+
+  /* Also handle Enter/Space on ss-items for keyboard accessibility */
+  document.addEventListener('keydown', (e) => {
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('ss-item')) {
+      e.preventDefault();
+      const src = e.target.querySelector('img').src;
+      openLightbox(src);
+    }
+  });
+
+  /* ═══════════════════════════════════════════════════════
+     THREE.JS — PARTICLE FIELD (identical to index.html)
+     ═══════════════════════════════════════════════════════ */
+  (function initThreeJS() {
+    const canvas = document.getElementById('three-canvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: false });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.z = 5;
+
+    const count = window.innerWidth < 768 ? 300 : 500;
+    const positions = new Float32Array(count * 3);
+    const velocities = new Float32Array(count * 3);
+    for (let i = 0; i < count * 3; i += 3) {
+      positions[i]     = (Math.random() - 0.5) * 16;
+      positions[i + 1] = (Math.random() - 0.5) * 16;
+      positions[i + 2] = (Math.random() - 0.5) * 10;
+      velocities[i]     = (Math.random() - 0.5) * 0.001;
+      velocities[i + 1] = (Math.random() - 0.5) * 0.001;
+      velocities[i + 2] = (Math.random() - 0.5) * 0.0005;
+    }
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+    const material = new THREE.PointsMaterial({
+      color: 0xc41e3a,
+      size: 1.2,
+      sizeAttenuation: true,
+      transparent: true,
+      opacity: 0.12,
+      blending: THREE.NormalBlending,
+      depthWrite: false
+    });
+
+    const particles = new THREE.Points(geometry, material);
+    scene.add(particles);
+
+    let mouseX = 0, mouseY = 0;
+    document.addEventListener('mousemove', (e) => {
+      mouseX = (e.clientX / window.innerWidth - 0.5) * 2;
+      mouseY = -(e.clientY / window.innerHeight - 0.5) * 2;
+    });
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const pos = geometry.attributes.position.array;
+      for (let i = 0; i < count * 3; i += 3) {
+        pos[i]     += velocities[i];
+        pos[i + 1] += velocities[i + 1];
+        pos[i + 2] += velocities[i + 2];
+        if (Math.abs(pos[i]) > 8) velocities[i] *= -1;
+        if (Math.abs(pos[i + 1]) > 8) velocities[i + 1] *= -1;
+        if (Math.abs(pos[i + 2]) > 5) velocities[i + 2] *= -1;
+      }
+      geometry.attributes.position.needsUpdate = true;
+      particles.rotation.y += (mouseX * 0.02 - particles.rotation.y) * 0.01;
+      particles.rotation.x += (mouseY * 0.02 - particles.rotation.x) * 0.01;
+      renderer.render(scene, camera);
+    }
+    animate();
+  })();
+
+  /* ═══════════════════════════════════════════════════════
+     LENIS — SMOOTH SCROLL
+     ═══════════════════════════════════════════════════════ */
+  const lenis = new Lenis({
+    duration: 1.2,
+    easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+    touchMultiplier: 2,
+  });
+  function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
+  requestAnimationFrame(raf);
+
+  lenis.on('scroll', ScrollTrigger.update);
+  gsap.ticker.add((time) => { lenis.raf(time * 1000); });
+  gsap.ticker.lagSmoothing(0);
+
+  /* ═══════════════════════════════════════════════════════
+     LOADING SEQUENCE
+     ═══════════════════════════════════════════════════════ */
+  const loaderTL = gsap.timeline();
+  loaderTL
+    .to('#loader .loader-brand', { opacity: 1, duration: 0.4, ease: 'power2.out' })
+    .to('#loader .loader-line', { opacity: 1, duration: 0.2, ease: 'power2.out' }, '-=0.1')
+    .to('#loader .loader-status', { opacity: 1, duration: 0.2, ease: 'power2.out' }, '-=0.05')
+    .to('#loader', { opacity: 0, duration: 0.5, ease: 'power2.inOut', delay: 1.4 })
+    .set('#loader', { display: 'none' })
+    .call(() => { initPageAnimations(); });
+
+  /* ═══════════════════════════════════════════════════════
+     GSAP — PAGE ANIMATIONS
+     ═══════════════════════════════════════════════════════ */
+  function initPageAnimations() {
+    gsap.registerPlugin(ScrollTrigger);
+
+    /* Hero name — character split per line */
+    document.querySelectorAll('#heroName .hero-line').forEach(line => {
+      const text = line.textContent;
+      line.innerHTML = '';
+      text.split('').forEach(char => {
+        const span = document.createElement('span');
+        span.className = 'char';
+        span.textContent = char;
+        line.appendChild(span);
+      });
+    });
+    document.getElementById('heroName').style.opacity = '1';
+
+    gsap.to('#heroName .char', {
+      opacity: 1, y: 0, duration: 0.06, stagger: 0.04,
+      ease: 'power2.out', delay: 0.1, from: { y: 40 }
+    });
+
+    /* Hero reveals */
+    gsap.utils.toArray('.hero .reveal').forEach((el, i) => {
+      gsap.fromTo(el,
+        { opacity: 0, y: 25 },
+        { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out', delay: 0.6 + i * 0.12 }
+      );
+    });
+
+    /* Scroll-triggered reveals */
+    gsap.utils.toArray('.reveal').forEach(el => {
+      if (el.closest('.hero')) return;
+      gsap.fromTo(el,
+        { opacity: 0, y: 30 },
+        {
+          opacity: 1, y: 0, duration: 0.8, ease: 'power3.out',
+          scrollTrigger: { trigger: el, start: 'top 88%', toggleActions: 'play none none none' }
+        }
+      );
+    });
+
+    /* Stagger capability cards */
+    gsap.utils.toArray('.cap-card').forEach((card, i) => {
+      gsap.fromTo(card,
+        { opacity: 0, y: 35 },
+        {
+          opacity: 1, y: 0, duration: 0.7, ease: 'power3.out', delay: i * 0.08,
+          scrollTrigger: { trigger: card, start: 'top 88%', toggleActions: 'play none none none' }
+        }
+      );
+    });
+
+    /* Stagger screenshot items */
+    gsap.utils.toArray('.ss-item').forEach((item, i) => {
+      gsap.fromTo(item,
+        { opacity: 0, y: 40 },
+        {
+          opacity: 1, y: 0, duration: 0.8, ease: 'power3.out', delay: i * 0.05,
+          scrollTrigger: { trigger: item, start: 'top 88%', toggleActions: 'play none none none' }
+        }
+      );
+    });
+
+    /* Flow nodes stagger */
+    gsap.utils.toArray('.flow-node').forEach((node, i) => {
+      gsap.fromTo(node,
+        { opacity: 0, x: -15 },
+        {
+          opacity: 1, x: 0, duration: 0.5, ease: 'power3.out', delay: i * 0.08,
+          scrollTrigger: { trigger: node, start: 'top 92%', toggleActions: 'play none none none' }
+        }
+      );
+    });
+    gsap.utils.toArray('.flow-arrow').forEach((arrow, i) => {
+      gsap.fromTo(arrow,
+        { opacity: 0 },
+        {
+          opacity: 1, duration: 0.3, ease: 'power2.out', delay: i * 0.08 + 0.1,
+          scrollTrigger: { trigger: arrow, start: 'top 92%', toggleActions: 'play none none none' }
+        }
+      );
+    });
+
+    /* Nav scroll state */
+    ScrollTrigger.create({
+      start: 'top -80',
+      onUpdate: (self) => {
+        document.getElementById('navbar').classList.toggle('scrolled', self.progress > 0);
+      }
+    });
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     HAMBURGER MENU
+     ═══════════════════════════════════════════════════════ */
+  const hamburger = document.getElementById('hamburger');
+  const mobileMenu = document.getElementById('mobileMenu');
+
+  hamburger.addEventListener('click', () => {
+    const isActive = hamburger.classList.toggle('active');
+    mobileMenu.classList.toggle('active');
+    hamburger.setAttribute('aria-expanded', isActive);
+    document.body.style.overflow = isActive ? 'hidden' : '';
+  });
+
+  function closeMobileMenu() {
+    hamburger.classList.remove('active');
+    mobileMenu.classList.remove('active');
+    hamburger.setAttribute('aria-expanded', 'false');
+    document.body.style.overflow = '';
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     SMOOTH SCROLL FOR ANCHOR LINKS
+     ═══════════════════════════════════════════════════════ */
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', (e) => {
+      e.preventDefault();
+      const target = document.querySelector(anchor.getAttribute('href'));
+      if (target) lenis.scrollTo(target, { offset: -60 });
+      closeMobileMenu();
+    });
+  });
+  </script>
+</body>
+</html>
